@@ -15,14 +15,36 @@ export const listOrders = async (): Promise<unknown[]> => {
   const formattedOrders = orders.map((order) => ({
     id: order.dataValues.id,
     userId: order.dataValues.userId,
-    productIds: order.dataValues.productIds?.map((product) => product.id) || [],
+    productIds: order.dataValues.productIds?.map((product) => product.id),
   }));  
 
   return formattedOrders;
 };
+interface Order {
+  id: number;
+}
 
-const productsService = {
+async function createOrder(userId: number): Promise<unknown> {
+  return OrderModel.create({ userId });
+}
+
+async function updateProductOrdersWithOrderId(productIds: number[], orderId: number):Promise<void> {
+  const updatePromises = productIds.map((productId) =>
+    ProductModel.update({ orderId }, { where: { id: productId } }));
+
+  await Promise.all(updatePromises);
+}
+
+export const createNewOrder = async (userId: number, productIds: number[]): Promise<unknown> => {
+  const newOrder = await createOrder(userId);
+  await updateProductOrdersWithOrderId(productIds, (newOrder as Order).id);
+
+  return { userId, productIds };
+};
+
+const ordersService = {
   listOrders,
+  createNewOrder,
 };
   
-export default productsService;
+export default ordersService;

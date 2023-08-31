@@ -3,6 +3,11 @@ import OrderModel from '../../../src/database/models/order.model';
 import app from '../../../src/app';
 import chai, { expect } from 'chai';
 import { listOrders } from '../../../src/services/orders.service'; 
+import { createNewOrder } from '../../../src/services/orders.service';
+import ProductModel from '../../../src/database/models/product.model';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs'
+import UserModel from '../../../src/database/models/user.model';
 
 
 describe('ListOrders', function () {
@@ -77,4 +82,34 @@ describe('ListOrders', function () {
     ]);
   });
 
+  it('should successfully create a new order', async function () {
+    // Arrange
+    const mockedOrder = OrderModel.build({ userId: 1 });
+    const mockedUser = UserModel.build({
+      id: 1,
+      username: 'Luke Ghostwalker',
+      vocation: 'Jedi do futuro',
+      level: 369,
+      password: 'hashed_password',
+    });
+
+    sinon.stub(OrderModel, 'create').resolves(mockedOrder);
+    sinon.stub(jwt, 'verify').resolves();
+    sinon.stub(ProductModel, 'update').resolves([1]);
+    sinon.stub(bcrypt, 'compareSync').returns(true);
+    sinon.stub(UserModel, 'findOne').resolves(mockedUser);
+
+    // Act
+    const response = await chai
+      .request(app)
+      .post('/orders')
+      .send({ userId: 1, productIds: [1, 2] })
+      .set('Authorization', '123456');
+
+    // Assert
+    expect(response.status).to.equal(201);
+
+    // Clean up (restore stubs)
+    sinon.restore();
+  });
 });
